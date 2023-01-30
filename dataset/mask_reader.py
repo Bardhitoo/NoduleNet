@@ -11,6 +11,7 @@ from scipy.ndimage.measurements import label
 import nrrd
 from utils.util import masks2bboxes_masks_one, pad2factor
 
+
 class MaskReader(Dataset):
     def __init__(self, data_dir, set_name, cfg, mode='train', split_combiner=None):
         self.mode = mode
@@ -31,7 +32,8 @@ class MaskReader(Dataset):
             self.filenames = np.load(set_name)
 
         if mode != 'test':
-            self.filenames = [f for f in self.filenames if (f not in self.blacklist)]
+            self.filenames = [f for f in self.filenames if
+                              (f not in self.blacklist and os.path.exists(os.path.join(data_dir, '%s_bboxes.npy' % f)))]
 
         for fn in self.filenames:
             l = np.load(os.path.join(data_dir, '%s_bboxes.npy' % fn))
@@ -54,7 +56,7 @@ class MaskReader(Dataset):
     def __getitem__(self, idx):
         t = time.time()
         np.random.seed(int(str(t % 1)[2:7]))  # seed according to time
-        is_random_img  = False
+        is_random_img = False
         if self.mode in ['train', 'val']:
             if idx >= len(self.bboxes):
                 is_random_crop = True
@@ -71,25 +73,25 @@ class MaskReader(Dataset):
                 filename = self.filenames[int(bbox[0])]
                 imgs = self.load_img(filename)
                 masks = self.load_mask(filename)
-                    
+
                 bboxes = self.sample_bboxes[int(bbox[0])]
 
-                do_sacle = self.augtype['scale'] and (self.mode=='train')
+                do_sacle = self.augtype['scale'] and (self.mode == 'train')
                 sample, target, masks = self.crop(imgs, bbox[1:], masks, do_sacle, is_random_crop)
                 if self.mode == 'train' and not is_random_crop:
-                     sample, target, masks = augment(sample, target, masks, 
-                                                             do_flip=self.augtype['flip'], do_rotate=self.augtype['rotate'],
-                                                             do_swap=self.augtype['swap'])
+                    sample, target, masks = augment(sample, target, masks,
+                                                    do_flip=self.augtype['flip'], do_rotate=self.augtype['rotate'],
+                                                    do_swap=self.augtype['swap'])
             else:
                 randimid = np.random.randint(len(self.filenames))
                 filename = self.filenames[randimid]
                 imgs = self.load_img(filename)
                 bboxes = self.sample_bboxes[randimid]
-                isScale = self.augtype['scale'] and (self.mode=='train')
-                sample, target, bboxes, coord = self.crop(imgs, [], bboxes,isScale=False,isRand=True)
+                isScale = self.augtype['scale'] and (self.mode == 'train')
+                sample, target, bboxes, coord = self.crop(imgs, [], bboxes, isScale=False, isRand=True)
 
             if sample.shape[1] != self.cfg['crop_size'][0] or sample.shape[2] != \
-                self.cfg['crop_size'][1] or sample.shape[3] != self.cfg['crop_size'][2]:
+                    self.cfg['crop_size'][1] or sample.shape[3] != self.cfg['crop_size'][2]:
                 print(filename, sample.shape)
 
             input = (sample.astype(np.float32) - 128) / 128
@@ -105,7 +107,7 @@ class MaskReader(Dataset):
 
         if self.mode in ['eval']:
             image = self.load_img(self.filenames[idx])
-            
+
             original_image = image[0]
 
             image = pad2factor(image[0])
@@ -127,22 +129,20 @@ class MaskReader(Dataset):
 
     def __len__(self):
         if self.mode == 'train':
-            return int(len(self.bboxes) / (1-self.r_rand))
-        elif self.mode =='val':
+            return int(len(self.bboxes) / (1 - self.r_rand))
+        elif self.mode == 'val':
             return len(self.bboxes)
         else:
             return len(self.filenames)
-
 
     def load_img(self, path_to_img):
         if path_to_img.startswith('LKDS'):
             img = np.load(os.path.join(self.data_dir, '%s_clean.npy' % (path_to_img)))
         else:
             img, _ = nrrd.read(os.path.join(self.data_dir, '%s_clean.nrrd' % (path_to_img)))
-        img = img[np.newaxis,...]
+        img = img[np.newaxis, ...]
 
         return img
-
 
     def load_mask(self, filename):
         mask, _ = nrrd.read(os.path.join(self.data_dir, '%s_mask.nrrd' % (filename)))
@@ -166,6 +166,7 @@ def pad_to_factor(image, factor=16, pad_value=170):
 
     return image
 
+
 def fillter_box(bboxes, size):
     res = []
     for box in bboxes:
@@ -180,39 +181,40 @@ def augment(sample, target, masks, do_flip = True, do_rotate=True, do_swap = Tru
         counter = 0
         while not validrot:
             newtarget = np.copy(target)
-            angle1 = np.random.rand()*180
+            angle1 = np.random.rand() * 180
             size = np.array(sample.shape[2:4]).astype('float')
             rotmat = np.array([[np.cos(angle1/180*np.pi),-np.sin(angle1/180*np.pi)],[np.sin(angle1/180*np.pi),np.cos(angle1/180*np.pi)]])
             newtarget[1:3] = np.dot(rotmat,target[1:3]-size/2)+size/2
             if np.all(newtarget[:3]>target[3]) and np.all(newtarget[:3]< np.array(sample.shape[1:4])-newtarget[3]):
                 validrot = True
                 target = newtarget
-                sample = rotate(sample,angle1,axes=(2,3),reshape=False)
-                masks = rotate(masks, angle1, axes=(1,2), reshape=False)
+                sample = rotate(sample, angle1, axes=(2, 3), reshape=False)
+                masks = rotate(masks, angle1, axes=(1, 2), reshape=False)
             else:
                 counter += 1
-                if counter ==3:
+                if counter == 3:
                     break
     if do_swap:
-        if sample.shape[1]==sample.shape[2] and sample.shape[1]==sample.shape[3]:
+        if sample.shape[1] == sample.shape[2] and sample.shape[1] == sample.shape[3]:
             axisorder = np.random.permutation(3)
-            sample = np.transpose(sample,np.concatenate([[0],axisorder+1]))
-            coord = np.transpose(coord,np.concatenate([[0],axisorder+1]))
+            sample = np.transpose(sample, np.concatenate([[0], axisorder + 1]))
+            coord = np.transpose(coord, np.concatenate([[0], axisorder + 1]))
             target[:3] = target[:3][axisorder]
-            bboxes[:,:3] = bboxes[:,:3][:,axisorder]
+            bboxes[:, :3] = bboxes[:, :3][:, axisorder]
 
     if do_flip:
-#         flipid = np.array([np.random.randint(2),np.random.randint(2),np.random.randint(2)])*2-1
-        flipid = np.array([1, np.random.randint(2), np.random.randint(2)]) * 2-1
-        sample = np.ascontiguousarray(sample[:,::flipid[0],::flipid[1],::flipid[2]])
-        masks = np.ascontiguousarray(masks[::flipid[0],::flipid[1],::flipid[2]])
+        #         flipid = np.array([np.random.randint(2),np.random.randint(2),np.random.randint(2)])*2-1
+        flipid = np.array([1, np.random.randint(2), np.random.randint(2)]) * 2 - 1
+        sample = np.ascontiguousarray(sample[:, ::flipid[0], ::flipid[1], ::flipid[2]])
+        masks = np.ascontiguousarray(masks[::flipid[0], ::flipid[1], ::flipid[2]])
 
         for ax in range(3):
-            if flipid[ax]==-1:
-                target[ax] = np.array(sample.shape[ax+1])-target[ax]
+            if flipid[ax] == -1:
+                target[ax] = np.array(sample.shape[ax + 1]) - target[ax]
 
     masks, num = label((masks > 0.5).astype(np.int32))
     return sample, target, masks
+
 
 class Crop(object):
     def __init__(self, config):
@@ -224,14 +226,14 @@ class Crop(object):
     def __call__(self, imgs, target, masks, do_scale=False, isRand=False):
         masks = (masks > 0).astype(np.int32)
         if do_scale:
-            radiusLim = [8.,120.]
-            scaleLim = [0.75,1.25]
-            scaleRange = [np.min([np.max([(radiusLim[0]/target[3]),scaleLim[0]]),1])
-                         ,np.max([np.min([(radiusLim[1]/target[3]),scaleLim[1]]),1])]
-            scale = np.random.rand()*(scaleRange[1]-scaleRange[0])+scaleRange[0]
+            radiusLim = [8., 120.]
+            scaleLim = [0.75, 1.25]
+            scaleRange = [np.min([np.max([(radiusLim[0] / target[3]), scaleLim[0]]), 1])
+                , np.max([np.min([(radiusLim[1] / target[3]), scaleLim[1]]), 1])]
+            scale = np.random.rand() * (scaleRange[1] - scaleRange[0]) + scaleRange[0]
             crop_size = (np.array(self.crop_size).astype('float') / scale).astype('int')
         else:
-            crop_size=self.crop_size
+            crop_size = self.crop_size
         bound_size = self.bound_size
         target = np.copy(target)
 
@@ -239,32 +241,32 @@ class Crop(object):
         for i in range(3):
             if not isRand:
                 r = target[3] / 2
-                s = np.floor(target[i] - r)+ 1 - bound_size
-                e = np.ceil (target[i] + r)+ 1 + bound_size - crop_size[i]
+                s = np.floor(target[i] - r) + 1 - bound_size
+                e = np.ceil(target[i] + r) + 1 + bound_size - crop_size[i]
             else:
-                s = np.max([imgs.shape[i+1]-crop_size[i]/2,imgs.shape[i+1]/2+bound_size])
-                e = np.min([crop_size[i]/2,              imgs.shape[i+1]/2-bound_size])
-                target = np.array([np.nan,np.nan,np.nan,np.nan])
-            if s>e:
-                start.append(np.random.randint(e,s))#!
+                s = np.max([imgs.shape[i + 1] - crop_size[i] / 2, imgs.shape[i + 1] / 2 + bound_size])
+                e = np.min([crop_size[i] / 2, imgs.shape[i + 1] / 2 - bound_size])
+                target = np.array([np.nan, np.nan, np.nan, np.nan])
+            if s > e:
+                start.append(np.random.randint(e, s))  # !
             else:
-                start.append(int(target[i])-crop_size[i]/2+np.random.randint(-bound_size/2,bound_size/2))
+                start.append(int(target[i]) - crop_size[i] / 2 + np.random.randint(-bound_size / 2, bound_size / 2))
 
         pad = []
-        pad.append([0,0])
+        pad.append([0, 0])
         for i in range(3):
-            leftpad = max(0,-start[i])
-            rightpad = max(0,start[i]+crop_size[i]-imgs.shape[i+1])
-            pad.append([leftpad,rightpad])
+            leftpad = max(0, -start[i])
+            rightpad = max(0, start[i] + crop_size[i] - imgs.shape[i + 1])
+            pad.append([leftpad, rightpad])
         crop = imgs[:,
-            max(start[0],0):min(start[0] + crop_size[0], imgs.shape[1]),
-            max(start[1],0):min(start[1] + crop_size[1], imgs.shape[2]),
-            max(start[2],0):min(start[2] + crop_size[2], imgs.shape[3])]
+               max(start[0], 0):min(start[0] + crop_size[0], imgs.shape[1]),
+               max(start[1], 0):min(start[1] + crop_size[1], imgs.shape[2]),
+               max(start[2], 0):min(start[2] + crop_size[2], imgs.shape[3])]
         crop = np.pad(crop, pad, 'constant', constant_values=self.pad_value)
         masks = masks[
-            max(start[0],0):min(start[0] + crop_size[0], imgs.shape[1]),
-            max(start[1],0):min(start[1] + crop_size[1], imgs.shape[2]),
-            max(start[2],0):min(start[2] + crop_size[2], imgs.shape[3])]
+                max(start[0], 0):min(start[0] + crop_size[0], imgs.shape[1]),
+                max(start[1], 0):min(start[1] + crop_size[1], imgs.shape[2]),
+                max(start[2], 0):min(start[2] + crop_size[2], imgs.shape[3])]
         masks = np.pad(masks, pad[1:], 'constant', constant_values=0)
 
         for i in range(3):
@@ -276,20 +278,19 @@ class Crop(object):
                 crop = zoom(crop, [1, scale, scale, scale], order=1)
                 masks = zoom(masks, [scale, scale, scale], order=1)
             newpad = self.crop_size[0] - crop.shape[1:][0]
-            if newpad<0:
-                crop = crop[:,:-newpad,:-newpad,:-newpad]
-                masks = masks[:-newpad,:-newpad,:-newpad]
-            elif newpad>0:
+            if newpad < 0:
+                crop = crop[:, :-newpad, :-newpad, :-newpad]
+                masks = masks[:-newpad, :-newpad, :-newpad]
+            elif newpad > 0:
                 pad2 = [[0, 0], [0, newpad], [0, newpad], [0, newpad]]
                 crop = np.pad(crop, pad2, 'constant', constant_values=self.pad_value)
                 masks = np.pad(masks, pad2[1:], 'constant', constant_values=0)
 
             for i in range(4):
-                target[i] = target[i]*scale
+                target[i] = target[i] * scale
         masks, num = label((masks > 0.5).astype(np.int32))
 
         return crop, target, masks
-
 
 # def collate(batch):
 #     if torch.is_tensor(batch[0]):

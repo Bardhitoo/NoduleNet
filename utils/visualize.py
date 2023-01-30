@@ -6,13 +6,14 @@ import matplotlib.pyplot as plt
 from matplotlib import patches
 import random
 import os
-import IPython.html.widgets as w
+import ipywidgets as w
+from IPython.display import display
 import cv2
 import matplotlib.animation as animation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from IPython.display import clear_output
 from matplotlib import colors
-from config import config
+from NoduleNet.config import config
 import matplotlib.gridspec as gridspec
 
 
@@ -42,13 +43,13 @@ def show3Dimg(image, *imgs):
     def fz(k):
         plt.subplot(1, n_img, 1)
         colorbar(plt.imshow(image[k]))
-        
+
         for i in range(len(imgs)):
             plt.subplot(1, n_img, 2+i)
             colorbar(plt.imshow(imgs[i][k], vmin=0, vmax=30))
-        
+
         plt.show()
-    w.interact(fz, k=w.IntSlider(min=0, max=image.shape[0] - 1, step=1, value=0))
+        w.interact(fz, k=w.IntSlider(min=0, max=image.shape[0] - 1, step=1, value=0))
 
 
 def show3Dimg2(image, *masks):
@@ -63,9 +64,9 @@ def show3Dimg2(image, *masks):
     params = {'z': 0, 'level': 128, 'width': 200, 'show_mask': True}
     z_slider = w.IntSlider(min=0, max=image.shape[0] - 1, step=1, value=params['z'], 
                            continuous_update=continuous_update, description="z")
-    level_slider = w.IntSlider(min=-1024, max=1000, step=1, value=params['level'], 
+    level_slider = w.IntSlider(min=-1024, max=1000, step=1, value=params['level'],
                               continuous_update=continuous_update, description="level")
-    width_slider = w.IntSlider(min=-1024, max=2000, step=1, value=params['width'], 
+    width_slider = w.IntSlider(min=-1024, max=2000, step=1, value=params['width'],
                               continuous_update=continuous_update, description="width")
     mask_checkbox = w.Checkbox(value=True, description='show mask', disabled=False)
 
@@ -77,7 +78,7 @@ def show3Dimg2(image, *masks):
         
         
         plt.imshow(image[z], cmap='gray', vmin=level - width / 2, vmax=level + width / 2)
-            
+
 
         if show_mask:
             for i in range(len(masks)):
@@ -87,22 +88,22 @@ def show3Dimg2(image, *masks):
                 
         plt.axis('off')
         plt.legend(handles=patches1, bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0. )
-        
+
         plt.show()
-        
-        
+
+
     def on_z_value_change(change):
         params['z'] = change.new
         plot_figure()
-        
+
     def on_level_value_change(change):
         params['level'] = change.new
         plot_figure()
-        
+
     def on_width_value_change(change):
         params['width'] = change.new
         plot_figure()
-        
+
     def on_mask_value_change(change):
         params['show_mask'] = change.new
         plot_figure()
@@ -132,9 +133,9 @@ def show_image_and_mask(img):
     def fz(k):
         plt.imshow(img[k], vmin=img.min(), vmax=img.max() + 1)
         plt.show()
-        
+
     w.interact(fz, k=w.IntSlider(min=0, max=img.shape[0] - 1, step=1, value=0))
-    
+
 
 def draw_one_rect(img, box, color=(0, 0, 255), scale=3, text=''):
     """
@@ -232,12 +233,12 @@ def draw_points(img, points, alpha=0.5):
     assert img.ndim == 3 or img.ndim == 4
     if img.ndim == 3:
         img = np.repeat(img[:, :, :, np.newaxis], 3, axis=3)
-        
+
     num = int(points.max())
     colors = get_cmap(num)
     for i in range(1, num + 1):
         img[points == i] = img[points == i] * (1 - alpha) + np.array(list(colors(i))[:-1]) * alpha
-        
+
     return img
 
 
@@ -271,7 +272,7 @@ def draw_pred(img, mask):
     img = img.copy()
     img = draw_points(img, mask)
     img = draw_text(img, 'Prediction')
-    
+
     return img
 
 
@@ -287,13 +288,13 @@ def generate_image_anim(img, interval=200, save_path=None):
     fig = plt.figure()
     ims = []
     for i in range(len(img)):
-        im = plt.imshow(img[i], animated=True)
+        im = plt.imshow(img[i], animated=True, cmap='gray')
         ims.append([im])
     anim = animation.ArtistAnimation(fig, ims, interval=interval, blit=True,
                                      repeat_delay=1000)
     if save_path:
-        Writer = animation.writers['ffmpeg']
-        writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
+        # Writer = animation.writers['ffmpeg']
+        # writer = Writer(fps=30, metadata=dict(artist='Me'), bitrate=1800)
         anim.save(save_path)
 
     return anim
@@ -305,7 +306,7 @@ def plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend, fmt=
     level = params['level']
     width = params['width']
     show_mask = params['show_mask']
-    
+
     # Ignore the start and end of z slice
     start = params['start'][1:]
     end = params['end'][1:]
@@ -315,9 +316,9 @@ def plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend, fmt=
     ncol = 4
     title_font_size = 10
     gs = gridspec.GridSpec(nrow, ncol,
-             wspace=0.01, hspace=0.01, 
-             top=0.7, bottom=0.3, 
-             left=0.5/(ncol+1), right=1-0.5/(ncol+1)) 
+             wspace=0.01, hspace=0.01,
+             top=0.7, bottom=0.3,
+             left=0.5/(ncol+1), right=1-0.5/(ncol+1))
 
     #         plt.subplot(gs[0, 0]).set_title('CT Image', size=title_font_size)
     #         plt.subplot(gs[0, 1]).set_title('Ground Truth', size=title_font_size)
@@ -342,7 +343,7 @@ def plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend, fmt=
     yx_rect = patches.Rectangle((c2, c1),d2,d1,
                          linewidth=1, edgecolor='white', facecolor='none')
     ax.add_patch(yx_rect)
-    
+
     image = image.copy()[:, start[0]:end[0], start[1]:end[1]]
     gt = [g.copy()[:, start[0]:end[0], start[1]:end[1]] for g in gt]
     pred = [p.copy()[:, start[0]:end[0], start[1]:end[1]] for p in pred]
@@ -398,8 +399,6 @@ def plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend, fmt=
         ax.imshow(gt_ctr[z], cmap=custom_cmap2, alpha=1, vmin=1, vmax=2)
         ax.imshow(pred_ctr[z], cmap=custom_cmap2, alpha=1, vmin=1, vmax=2)
 
-
-
     #         plt.axis('off')
     legend_properties = {'size': 20} # {'weight': 'bold'}
     if show_all_legend:
@@ -415,12 +414,16 @@ def plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend, fmt=
 
     ax = plt.gca().add_artist(first_legend)
     plt.legend(handles=patches2,  bbox_to_anchor=(1.01, 0.2), loc=2, borderaxespad=0., prop=legend_properties)
-    
+
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+
     if 'png' in fmt:
         plt.savefig(os.path.join(save_dir, '{}.png'.format(z)), bbox_inches='tight')
     if 'pdf' in fmt:
         plt.savefig(os.path.join(save_dir, '{}.pdf'.format(z)), bbox_inches='tight')
-    #         plt.show()
+
+    plt.show()
 
 
 def show3D_comparison(image, gt, pred, bbox, save_dir='paper_figs/', show_all_legend=True):
@@ -438,44 +441,44 @@ def show3D_comparison(image, gt, pred, bbox, save_dir='paper_figs/', show_all_le
 #     n_img = 1 + sum([not img is None for img in masks])
     start, end = bbox
     params = {'z': 0, 'level': 128, 'width': 200, 'show_mask': True, 'start': start, 'end': end}
-    z_slider = w.IntSlider(min=0, max=image.shape[0] - 1, step=1, value=params['z'], 
+    z_slider = w.IntSlider(min=0, max=image.shape[0] - 1, step=1, value=params['z'],
                            continuous_update=continuous_update, description="z")
-    level_slider = w.IntSlider(min=-1024, max=1000, step=1, value=params['level'], 
+    level_slider = w.IntSlider(min=-1024, max=1000, step=1, value=params['level'],
                               continuous_update=continuous_update, description="level")
-    width_slider = w.IntSlider(min=-1024, max=2000, step=1, value=params['width'], 
+    width_slider = w.IntSlider(min=-1024, max=2000, step=1, value=params['width'],
                               continuous_update=continuous_update, description="width")
     mask_checkbox = w.Checkbox(value=True, description='show mask', disabled=False)
-    
+
     N = 3
     plt.rcParams['legend.markerscale'] = 0.2
     fig, axes = plt.subplots(1, N)
     plt.subplots_adjust(hspace=0)
     for i in range(N):
         axes[i].set_axis_off()
-        
+
     def on_z_value_change(change):
         params['z'] = change.new
         plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend)
-        
+
     def on_level_value_change(change):
         params['level'] = change.new
         plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend)
-        
+
     def on_width_value_change(change):
         params['width'] = change.new
         plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend)
-        
+
     def on_mask_value_change(change):
         params['show_mask'] = change.new
         plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend)
-    
+
     display(z_slider, level_slider, width_slider, mask_checkbox)
-    
+
     z_slider.observe(on_z_value_change, names='value')
     level_slider.observe(on_level_value_change, names='value')
     width_slider.observe(on_width_value_change, names='value')
     mask_checkbox.observe(on_mask_value_change, names='value')
-    
+
     plot_compare_figure(image, gt, pred, params, save_dir, show_all_legend)
 
 

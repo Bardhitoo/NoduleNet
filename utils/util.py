@@ -257,6 +257,7 @@ def coord_box_to_center_box(bboxes):
 
     return res
 
+
 def ext2factor(bboxes, factor=8):
     """
     Given center box representation which is [z_start, y_start, x_start, z_end, y_end, x_end],
@@ -266,6 +267,7 @@ def ext2factor(bboxes, factor=8):
     bboxes[:, 3:] = bboxes[:, 3:] // factor * factor + (bboxes[:, 3:] % factor != 0).astype(np.int32) * factor
 
     return bboxes
+
 
 def clip_boxes(boxes, img_size):
     '''
@@ -333,6 +335,7 @@ def crop_boxes2mask(crop_boxes, masks, img_reso, num_class=28):
         mask[cat - 1][z_start:z_end, y_start:y_end, x_start:x_end] = (m > 0.5).astype(np.uint8)
     
     return mask
+
 
 def crop_boxes2mask_single(crop_boxes, masks, img_reso):
     """
@@ -413,7 +416,6 @@ def masks2bboxes_masks_one(masks, border):
     return bboxes, truth_masks
 
 
-
 def extend_bbox(bboxes, extend_border):
     """
         input bbox shape: (Z, Y, X, D)
@@ -425,7 +427,6 @@ def extend_bbox(bboxes, extend_border):
     return_bboxes = np.concatenate((original_bbox,D,D),axis=1)
     
     return return_bboxes
-    
 
 
 def bboxes_masks2masks(coord_boxes, masks, labels, reso, num_class=len(config['roi_names'])):
@@ -589,8 +590,9 @@ def normalize(img):
     img = (img - minimum) / max(1, (maximum - minimum))
     
     # -1 ~ 1
-    img = img * 2 - 1
+    # img = img * 2 - 1
     return img
+
 
 def annotation2multi_mask(mask):
     multi_mask = np.zeros(mask[mask.keys()[0]].shape)
@@ -599,6 +601,7 @@ def annotation2multi_mask(mask):
             multi_mask[mask[roi] > 0] = i + 1
 
     return multi_mask
+
 
 def annotation2masks(mask):
     D, H, W = mask[mask.keys()[0]].shape
@@ -609,6 +612,7 @@ def annotation2masks(mask):
 
     return masks
 
+
 def multi_mask2onehot(mask):
     D, H, W = mask.shape
     onehot_mask = np.zeros((len(config['roi_names']) + 1, D, H, W))
@@ -616,6 +620,7 @@ def multi_mask2onehot(mask):
         onehot_mask[i][mask == i] = 1
 
     return onehot_mask
+
 
 def onehot2multi_mask(onehot):
     num_class, D, H, W = onehot.shape
@@ -625,6 +630,7 @@ def onehot2multi_mask(onehot):
         multi_mask[onehot[i] > 0] = i
 
     return multi_mask
+
 
 def load_dicom_image(foldername):
     reader = sitk.ImageSeriesReader()

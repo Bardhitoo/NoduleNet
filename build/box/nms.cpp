@@ -10,12 +10,12 @@ int cpu_nms(at::Tensor * keep_out, at::Tensor * num_out, at::Tensor * boxes, at:
     AT_CHECK(areas->is_contiguous(), "argument#5(areas) must be contiguous");
 
     // Number of ROIs
-    long boxes_num = boxes->sizes()[0];
-    long boxes_dim = boxes->sizes()[1];
+    int64_t boxes_num = boxes->sizes()[0];
+    int64_t boxes_dim = boxes->sizes()[1];
 
-    auto keep_out_flat = keep_out->data<long>();
+    auto keep_out_flat = keep_out->data<int64_t>();
     auto boxes_flat = boxes->data<float>();
-    auto order_flat = order->data<long>();
+    auto order_flat = order->data<int64_t>();
     auto areas_flat =  areas->data<float>();
 
     at::Tensor suppressed = at::zeros({boxes_num}, at::kInt);
@@ -34,7 +34,7 @@ int cpu_nms(at::Tensor * keep_out, at::Tensor * num_out, at::Tensor * boxes, at:
     float w, h, d;
     float inter, ovr;
 
-    long num_to_keep = 0;
+    int64_t num_to_keep = 0;
     for (_i=0; _i < boxes_num; ++_i) {
         i = order_flat[_i];
         if (suppressed_flat[i] == 1) {
@@ -93,7 +93,7 @@ int cpu_nms(at::Tensor * keep_out, at::Tensor * num_out, at::Tensor * boxes, at:
         }
     }
 
-    auto num_out_flat = num_out->data<long>();
+    auto num_out_flat = num_out->data<int64_t>();
     *num_out_flat = num_to_keep;
 
     return 1;
