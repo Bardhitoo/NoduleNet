@@ -12,7 +12,7 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed_all(SEED)
 
 # Preprocessing using preserved HU in dilated part of mask
-BASE = '/home/htang6/workspace/data/LIDC/' # make sure you have the ending '/'
+BASE = 'C:/Users/bardh/Desktop/2021/RIT_CS/sem_2/independent_study/lung_cancer_proj/data/' # make sure you have the ending '/'
 data_config = {
     # put combined LUNA16 .mhd files into one folder
     'data_dir': BASE + 'combined',
@@ -21,7 +21,7 @@ data_config = {
     'preprocessed_data_dir': BASE + 'preprocessed_test/3',
 
     # put annotation downloaded from LIDC to this path
-    'annos_dir': BASE + 'annotation/LIDC-XML-only/tcia-lidc-xml',
+    'annos_dir': BASE + 'subset_012345',
 
     # put lung mask downloaded from LUNA16 to this path
     'lung_mask_dir': BASE + 'seg-lungs-LUNA16/',
