@@ -1,29 +1,23 @@
-import sys
-import numpy as np
-import torch
-from config import config
-import pydicom as dicom
-import numpy as np
-from scipy.sparse import csc_matrix
-from collections import defaultdict
+import math
 import os
-import shutil
-import operator
-import warnings
-import numpy as np
+import sys
+
 # import matplotlib as mpl
 # mpl.use('TkAgg')
 # import matplotlib.pyplot as plt
 import SimpleITK as sitk
-import pydicom
-import matplotlib.cm as cm
-import math
-from skimage import measure
-from scipy.ndimage import zoom
-from scipy.sparse import csr_matrix
-from scipy.spatial.distance import cdist
+import numpy as np
 import pandas as pd
-import cv2
+import torch
+from scipy.ndimage import zoom
+from scipy.spatial.distance import cdist
+from skimage import measure
+
+try:
+    from config import configx
+except:
+    from NoduleNet.config import config
+
 try:
     # Python2
     from StringIO import StringIO
