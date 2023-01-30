@@ -15,7 +15,7 @@ from skimage import measure
 
 try:
     from config import configx
-except:
+except ImportError:
     from NoduleNet.config import config
 
 try:
