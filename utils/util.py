@@ -14,8 +14,10 @@ from scipy.spatial.distance import cdist
 from skimage import measure
 
 try:
+    # Running NoduleNet
     from config import configx
 except ImportError:
+    # Running 3D Nodule Visualization
     from NoduleNet.config import config
 
 try:
